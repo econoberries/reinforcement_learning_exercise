@@ -44,11 +44,33 @@ class HomeworkSmokeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('0.282195', result.stdout)
 
-    def test_hw3_policy_option_exists_but_is_incomplete(self):
+    def test_hw3_policy_iteration_runs(self):
         result = run_gridworld('homework_03', '-g', 'MazeGrid', '-a', 'policy',
-                               '-i', '3', '-k', '0')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('NotImplementedError', result.stderr)
+                               '-i', '100', '-k', '0')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('S: 0.28', result.stdout)
+
+    def test_hw3_policy_matches_value_iteration(self):
+        work = ROOT / 'homeworks' / 'homework_03' / 'gridworld'
+        code = """from gridworld import getMazeGrid
+from agent import ValueIterationAgent, PolicyIterationAgent
+for noise in (0.2, 0.0):
+    mdp = getMazeGrid()
+    mdp.setNoise(noise)
+    vi = ValueIterationAgent(mdp, 0.9, 100)
+    pi = PolicyIterationAgent(mdp, 0.9, 100)
+    assert pi.converged
+    assert abs(vi.getValue(mdp.getStartState()) - pi.getValue(mdp.getStartState())) < 1e-8
+    for state in mdp.getStates():
+        action = pi.getPolicy(state)
+        if action is not None:
+            assert action in mdp.getPossibleActions(state)
+print('ok')
+"""
+        result = subprocess.run([sys.executable, '-c', code], cwd=work,
+                                text=True, capture_output=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('ok', result.stdout)
 
 if __name__ == '__main__':
     unittest.main()

@@ -176,92 +176,72 @@ class ValueIterationAgent(Agent):
 # Homework 3: Policy Iteration (work in progress)
 
 class PolicyIterationAgent(Agent):
-  """Policy iteration: repeatedly evaluate a fixed policy and improve it.
-
-  iterations counts policy-improvement rounds, not value sweeps.
-  Each evaluation uses Bellman expectation backups until convergence.
-  """
+  """Evaluate a policy, improve it, and repeat until it stops changing."""
 
   def __init__(self, mdp, discount=0.9, iterations=100):
     self.mdp = mdp
     self.discount = discount
-    self.iterations = iterations
     self.values = {state: 0.0 for state in mdp.getStates()}
 
-    # Start with a deterministic policy: first available action (usually north).
-    # The genuine terminal state has no action and is not stored in the policy.
+    # Start by choosing the first available action in each state.
     self.policy = {}
     for state in mdp.getStates():
       actions = mdp.getPossibleActions(state)
       if actions:
         self.policy[state] = actions[0]
 
-    # These records let us answer HW3 3(b)-(c) unambiguously.
     self.rounds = 0
-    self.converged = False
     self.start_values_by_round = []
-    self.policy_changes_by_round = []
-    self.evaluation_sweeps_by_round = []
-    self.evaluation_tolerance = 1e-12
-    self.max_evaluation_sweeps = 10000
+    stable = False
 
     for _ in range(iterations):
-      # 1. Evaluation: compute V for the current FIXED policy.
-      sweeps = self.evaluate_policy()
-      self.evaluation_sweeps_by_round.append(sweeps)
+      # 1. Evaluate the current policy.
+      self.evaluate_policy()
+      self.rounds += 1
       self.start_values_by_round.append(self.getValue(mdp.getStartState()))
 
-      # 2. Improvement: choose actions that give higher expected return.
-      changes = 0
-      new_policy = self.policy.copy()
+      # 2. Improve the policy.
+      stable = True
       for state, old_action in self.policy.items():
         best_action = old_action
         best_q = self.getQValue(state, old_action)
         for action in mdp.getPossibleActions(state):
           q = self.getQValue(state, action)
           if q > best_q + 1e-12:
-            best_q = q
-            best_action = action
+            best_action, best_q = action, q
         if best_action != old_action:
-          changes += 1
-          new_policy[state] = best_action
+          self.policy[state] = best_action
+          stable = False
 
-      self.policy = new_policy
-      self.rounds += 1
-      self.policy_changes_by_round.append(changes)
-
-      # 3. Stop when a full improvement round changes no action.
-      if changes == 0:
-        self.converged = True
+      # 3. Stop if no action changes.
+      if stable:
         break
 
-    # If we stop because of -i, the last improved policy may not have
-    # been evaluated yet. Keep self.values consistent with self.policy.
-    if self.rounds > 0 and not self.converged:
+    # Ensure the values match the final policy if the iteration limit was hit.
+    if self.rounds > 0 and not stable:
       self.evaluate_policy()
 
   def evaluate_policy(self):
-    """Synchronous Bellman expectation backups for the current policy."""
-    for sweep in range(1, self.max_evaluation_sweeps + 1):
+    """Repeat Bellman expectation updates until values stabilize."""
+    for _ in range(10000):
       new_values = self.values.copy()
       for state, action in self.policy.items():
         new_values[state] = self.getQValue(state, action)
-      delta = max(abs(new_values[s] - self.values[s])
-                  for s in self.values)
+      change = max(abs(new_values[s] - self.values[s]) for s in self.values)
       self.values = new_values
-      if delta < self.evaluation_tolerance:
-        return sweep
-    raise RuntimeError("Policy evaluation did not converge within the sweep limit")
+      if change < 1e-12:
+        return
+    raise RuntimeError("Policy evaluation did not converge")
 
   def getValue(self, state):
     return self.values[state]
 
   def getQValue(self, state, action):
-    q_value = 0.0
+    q = 0.0
     for next_state, probability in self.mdp.getTransitionStatesAndProbs(state, action):
       reward = self.mdp.getReward(state, action, next_state)
-      q_value += probability * (reward + self.discount * self.values[next_state])
-    return q_value
+      q += probability * (reward + self.discount * self.values[next_state])
+    return q
 
   def getPolicy(self, state):
     return self.policy.get(state)
@@ -270,7 +250,6 @@ class PolicyIterationAgent(Agent):
     return self.getPolicy(state)
 
   def update(self, state, action, nextState, reward):
-    # Planning agent: its policy is computed before interacting with Gridworld.
     pass
 
 

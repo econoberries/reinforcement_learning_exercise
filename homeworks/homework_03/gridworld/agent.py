@@ -176,14 +176,13 @@ class ValueIterationAgent(Agent):
 # Homework 3: Policy Iteration (work in progress)
 
 class PolicyIterationAgent(Agent):
-  """Evaluate a policy, improve it, and repeat until it stops changing."""
+  """Evaluate and improve a policy until no actions change."""
 
   def __init__(self, mdp, discount=0.9, iterations=100):
     self.mdp = mdp
     self.discount = discount
     self.values = {state: 0.0 for state in mdp.getStates()}
 
-    # Start by choosing the first available action in each state.
     self.policy = {}
     for state in mdp.getStates():
       actions = mdp.getPossibleActions(state)
@@ -192,46 +191,40 @@ class PolicyIterationAgent(Agent):
 
     self.rounds = 0
     self.start_values_by_round = []
-    stable = False
 
     for _ in range(iterations):
-      # 1. Evaluate the current policy.
+      # Evaluate the current policy.
       self.evaluate_policy()
       self.rounds += 1
-      self.start_values_by_round.append(self.getValue(mdp.getStartState()))
+      self.start_values_by_round.append(self.values[mdp.getStartState()])
 
-      # 2. Improve the policy.
-      stable = True
+      # Improve the current policy.
+      new_policy = {}
       for state, old_action in self.policy.items():
         best_action = old_action
-        best_q = self.getQValue(state, old_action)
         for action in mdp.getPossibleActions(state):
-          q = self.getQValue(state, action)
-          if q > best_q + 1e-12:
-            best_action, best_q = action, q
-        if best_action != old_action:
-          self.policy[state] = best_action
-          stable = False
+          if self.getQValue(state, action) > self.getQValue(state, best_action):
+            best_action = action
+        new_policy[state] = best_action
 
-      # 3. Stop if no action changes.
-      if stable:
+      if new_policy == self.policy:
         break
+      self.policy = new_policy
 
-    # Ensure the values match the final policy if the iteration limit was hit.
-    if self.rounds > 0 and not stable:
+    # Keep values consistent with the final policy.
+    if self.rounds > 0:
       self.evaluate_policy()
 
   def evaluate_policy(self):
-    """Repeat Bellman expectation updates until values stabilize."""
-    for _ in range(10000):
+    while True:
       new_values = self.values.copy()
       for state, action in self.policy.items():
         new_values[state] = self.getQValue(state, action)
-      change = max(abs(new_values[s] - self.values[s]) for s in self.values)
+
+      difference = max(abs(new_values[s] - self.values[s]) for s in self.values)
       self.values = new_values
-      if change < 1e-12:
+      if difference < 1e-10:
         return
-    raise RuntimeError("Policy evaluation did not converge")
 
   def getValue(self, state):
     return self.values[state]

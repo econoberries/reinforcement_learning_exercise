@@ -21,8 +21,7 @@ The `-a policy` option is registered. `PolicyIterationAgent` now:
 3. Improves it greedily and stops when no action changes.
 
 `-i` limits policy-evaluation/improvement **rounds**, not individual value
-sweeps. Evaluation uses a tolerance of `1e-12` and a safety cap of 10000
-sweeps per round.
+sweeps. Evaluation stops when the largest state-value change is below `1e-10`.
 
 To answer 3(b) and 3(c), inspect:
 - `rounds`: number of evaluation/improvement rounds executed;

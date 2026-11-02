@@ -59,7 +59,7 @@ for noise in (0.2, 0.0):
     mdp.setNoise(noise)
     vi = ValueIterationAgent(mdp, 0.9, 100)
     pi = PolicyIterationAgent(mdp, 0.9, 100)
-    assert pi.converged
+    assert 0 < pi.rounds < 100
     assert abs(vi.getValue(mdp.getStartState()) - pi.getValue(mdp.getStartState())) < 1e-8
     for state in mdp.getStates():
         action = pi.getPolicy(state)

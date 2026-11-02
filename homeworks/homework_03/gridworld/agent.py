@@ -176,24 +176,92 @@ class ValueIterationAgent(Agent):
 # Homework 3: Policy Iteration (work in progress)
 
 class PolicyIterationAgent(Agent):
-  """Homework 3: implement policy evaluation and policy improvement."""
+  """Policy iteration: repeatedly evaluate a fixed policy and improve it.
+
+  iterations counts policy-improvement rounds, not value sweeps.
+  Each evaluation uses Bellman expectation backups until convergence.
+  """
 
   def __init__(self, mdp, discount=0.9, iterations=100):
     self.mdp = mdp
     self.discount = discount
     self.iterations = iterations
     self.values = {state: 0.0 for state in mdp.getStates()}
+
+    # Start with a deterministic policy: first available action (usually north).
+    # The genuine terminal state has no action and is not stored in the policy.
     self.policy = {}
-    # TODO (HW3): choose an initial policy.
-    # TODO (HW3): alternate evaluating that policy with improving it.
-    # TODO (HW3): stop when the policy is stable or an iteration limit is reached.
-    raise NotImplementedError("Homework 3 policy iteration is not implemented yet")
+    for state in mdp.getStates():
+      actions = mdp.getPossibleActions(state)
+      if actions:
+        self.policy[state] = actions[0]
+
+    # These records let us answer HW3 3(b)-(c) unambiguously.
+    self.rounds = 0
+    self.converged = False
+    self.start_values_by_round = []
+    self.policy_changes_by_round = []
+    self.evaluation_sweeps_by_round = []
+    self.evaluation_tolerance = 1e-12
+    self.max_evaluation_sweeps = 10000
+
+    for _ in range(iterations):
+      # 1. Evaluation: compute V for the current FIXED policy.
+      sweeps = self.evaluate_policy()
+      self.evaluation_sweeps_by_round.append(sweeps)
+      self.start_values_by_round.append(self.getValue(mdp.getStartState()))
+
+      # 2. Improvement: choose actions that give higher expected return.
+      changes = 0
+      new_policy = self.policy.copy()
+      for state, old_action in self.policy.items():
+        best_action = old_action
+        best_q = self.getQValue(state, old_action)
+        for action in mdp.getPossibleActions(state):
+          q = self.getQValue(state, action)
+          if q > best_q + 1e-12:
+            best_q = q
+            best_action = action
+        if best_action != old_action:
+          changes += 1
+          new_policy[state] = best_action
+
+      self.policy = new_policy
+      self.rounds += 1
+      self.policy_changes_by_round.append(changes)
+
+      # 3. Stop when a full improvement round changes no action.
+      if changes == 0:
+        self.converged = True
+        break
+
+    # If we stop because of -i, the last improved policy may not have
+    # been evaluated yet. Keep self.values consistent with self.policy.
+    if self.rounds > 0 and not self.converged:
+      self.evaluate_policy()
+
+  def evaluate_policy(self):
+    """Synchronous Bellman expectation backups for the current policy."""
+    for sweep in range(1, self.max_evaluation_sweeps + 1):
+      new_values = self.values.copy()
+      for state, action in self.policy.items():
+        new_values[state] = self.getQValue(state, action)
+      delta = max(abs(new_values[s] - self.values[s])
+                  for s in self.values)
+      self.values = new_values
+      if delta < self.evaluation_tolerance:
+        return sweep
+    raise RuntimeError("Policy evaluation did not converge within the sweep limit")
 
   def getValue(self, state):
     return self.values[state]
 
   def getQValue(self, state, action):
-    raise NotImplementedError("Homework 3: compute q_pi(s, a)")
+    q_value = 0.0
+    for next_state, probability in self.mdp.getTransitionStatesAndProbs(state, action):
+      reward = self.mdp.getReward(state, action, next_state)
+      q_value += probability * (reward + self.discount * self.values[next_state])
+    return q_value
 
   def getPolicy(self, state):
     return self.policy.get(state)
@@ -202,6 +270,7 @@ class PolicyIterationAgent(Agent):
     return self.getPolicy(state)
 
   def update(self, state, action, nextState, reward):
+    # Planning agent: its policy is computed before interacting with Gridworld.
     pass
 
 

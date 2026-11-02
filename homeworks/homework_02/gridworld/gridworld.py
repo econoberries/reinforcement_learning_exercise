@@ -105,7 +105,7 @@ def getUserAction(state, actionFunction):
 # Exercise 1: Implement "return" computation
 def runEpisode(agent, environment, discount, decision, display, message, pause, episode):
   returns = 0
-  totalDiscount = 1.0 # added code # discount factor = 1, future rewards matter!
+  totalDiscount = 1.0
   environment.reset()
   message("BEGINNING EPISODE: "+str(episode)+"\n")
   while True:
@@ -119,8 +119,7 @@ def runEpisode(agent, environment, discount, decision, display, message, pause, 
     actions = environment.getPossibleActions(state)
     if len(actions) == 0:
       message("EPISODE "+str(episode)+" COMPLETE: RETURN WAS "+str(returns)+"\n")
-      #return 0  # TODO: IMPLEMENT "return" obtained in the episode
-      return returns # added code
+      return returns
 
     # GET ACTION (USUALLY FROM AGENT)
     action = decision(state)
@@ -137,14 +136,9 @@ def runEpisode(agent, environment, discount, decision, display, message, pause, 
     # UPDATE LEARNER
     agent.update(state, action, nextState, reward)
 
-    # TODO: make sure you compute the returns
-    # doAction returns (reward, nextState) pair
-    # to compute returns, add reward multiplied by current total discount
-    # first total discount is 1 (Rt+1)
-    # the totalDiscount is multiplied by discount (γ) after each round
-    # resulting in:   Gt = Rt+1 + γRt+2 + γ2Rt+3 + ...
-    returns += reward * totalDiscount # added code 
-    totalDiscount *= discount # added code
+    # G = R1 + gamma*R2 + gamma^2*R3 + ...
+    returns += totalDiscount * reward
+    totalDiscount *= discount
 
 
 
@@ -292,28 +286,24 @@ if __name__ == '__main__':
     print("RUNNING", opts.episodes, "EPISODES")
     print()
 
-  # Exercise 1: implement the mean and std of the value estimation for the start state and print it out
+  # Estimate the mean and SD of the episode returns.
+  episode_returns = []
+  for episode in range(1, opts.episodes + 1):
+    result = runEpisode(a, env, opts.discount, decisionCallback,
+                        displayCallback, messageCallback, pauseCallback, episode)
+    episode_returns.append(result)
 
-  # The value function measures the expected return when starting in state sand following policy π
-  # vπ(s) = Eπ[Gt |St = s]
+  if episode_returns:
+    mean_return = sum(episode_returns) / len(episode_returns)
+    variance = sum((r - mean_return) ** 2 for r in episode_returns) / len(episode_returns)
+    std_return = variance ** 0.5
 
-  # check what runEpisode returns
-
-  policyReturns = []
-
-  for episode in range(1, opts.episodes+1): # opts.episodes is # episodes for the agent to run
-    # after finishing in a terminal state, it will return the return (Gt, the total discounted future reward)
-    policyReturns.append(runEpisode(a, env, opts.discount, decisionCallback, displayCallback, messageCallback, pauseCallback, episode))
-  if opts.episodes > 0:
-    meanReturn = sum(policyReturns) / len(policyReturns)
-    varReturns = sum((x - meanReturn) ** 2 for x in policyReturns) / len(policyReturns)
-    stdReturn = varReturns ** 0.5
-    meanwithin = 0.1
-    numEpisodes = ((1.96 * stdReturn) / meanwithin) ** 2
+    # Required episodes for a 95% confidence interval with this tolerance.
+    tolerance = 0.1
+    needed = ((1.96 * std_return) / tolerance) ** 2
 
     print()
-    print("Mean returns: ", meanReturn)
-    print("SD: ", stdReturn)
-    print("episodes needed for 95% confidence within", meanwithin, ": ", numEpisodes)
-    print()
+    print("Mean returns: ", mean_return)
+    print("SD: ", std_return)
+    print("episodes needed for 95% confidence within", tolerance, ": ", needed)
     print()

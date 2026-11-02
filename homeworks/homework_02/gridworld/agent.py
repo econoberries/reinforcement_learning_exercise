@@ -68,92 +68,34 @@ class RandomAgent(Agent):
 # Exercise 2
 
 class ValueIterationAgent(Agent):
+  """Update values using the Bellman optimality equation."""
 
-  def __init__(self, mdp: Gridworld, discount = 0.9, iterations = 100):
-    """
-    Your value iteration agent should take a mdp on
-    construction, run the indicated number of iterations
-    and then act according to the resulting policy.
-    """
+  def __init__(self, mdp, discount=0.9, iterations=100):
     self.mdp = mdp
     self.discount = discount
-    self.iterations = iterations
+    self.values = {state: 0.0 for state in mdp.getStates()}
 
-    values = {state: 0.0 for state in mdp.getStates()}
+    # Repeat the value iteration update.
     for _ in range(iterations):
-      buffer = values.copy()
-
+      new_values = self.values.copy()
       for state in mdp.getStates():
         actions = mdp.getPossibleActions(state)
-
-        if not actions:
-          continue
-
-        q_values = []
-
-        for action in actions:
-          q = 0.0
-
-          for next_state, probability in mdp.getTransitionStatesAndProbs(state, action):
-            reward = mdp.getReward(state, action, next_state)
-            q+= probability * (reward + discount * values[next_state])
-
-          q_values.append(q)
-
-        buffer[state] = max(q_values)
-
-      values = buffer
-
-    self.values = values
-
-
+        if actions:
+          new_values[state] = max(self.getQValue(state, action) for action in actions)
+      self.values = new_values
 
   def getValue(self, state):
-    """
-    Look up the value of the state (after the indicated
-    number of value iteration passes).
-    """
     return self.values[state]
 
-
-
   def getQValue(self, state, action):
-    """
-    Look up the q-value of the state action pair
-    (after the indicated number of value iteration
-    passes).  Note that value iteration does not
-    necessarily create this quantity and you may have
-    to derive it on the fly.
-    """
-    q_value = 0.0
-
+    q = 0.0
     for next_state, probability in self.mdp.getTransitionStatesAndProbs(state, action):
-        reward = self.mdp.getReward(state, action, next_state)
-
-        q_value += probability * (
-            reward + self.discount * self.values[next_state]
-        )
-
-    return q_value
-
-
+      reward = self.mdp.getReward(state, action, next_state)
+      q += probability * (reward + self.discount * self.values[next_state])
+    return q
 
   def getPolicy(self, state):
-    """
-    Look up the policy's recommendation for the state
-    (after the indicated number of value iteration passes).
-    """
-
-    return self.getAction(state)
-
-
-
-  def getAction(self, state):
-    """
-    Return the action recommended by the policy.
-    """
     actions = self.mdp.getPossibleActions(state)
-
     if not actions:
       return None
 
@@ -163,12 +105,10 @@ class ValueIterationAgent(Agent):
         best_action = action
     return best_action
 
+  def getAction(self, state):
+    return self.getPolicy(state)
 
   def update(self, state, action, nextState, reward):
-    """
-    Not used for value iteration agents!
-    """
-
     pass
 
 

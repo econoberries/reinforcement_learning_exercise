@@ -176,24 +176,67 @@ class ValueIterationAgent(Agent):
 # Homework 3: Policy Iteration (work in progress)
 
 class PolicyIterationAgent(Agent):
-  """Homework 3: implement policy evaluation and policy improvement."""
+  """Evaluate and improve a policy until no actions change."""
 
   def __init__(self, mdp, discount=0.9, iterations=100):
     self.mdp = mdp
     self.discount = discount
-    self.iterations = iterations
     self.values = {state: 0.0 for state in mdp.getStates()}
+
     self.policy = {}
-    # TODO (HW3): choose an initial policy.
-    # TODO (HW3): alternate evaluating that policy with improving it.
-    # TODO (HW3): stop when the policy is stable or an iteration limit is reached.
-    raise NotImplementedError("Homework 3 policy iteration is not implemented yet")
+    for state in mdp.getStates():
+      actions = mdp.getPossibleActions(state)
+      if actions:
+        self.policy[state] = actions[0]
+
+    self.rounds = 0
+    self.start_values_by_round = []
+
+    for _ in range(iterations):
+      # Evaluate the current policy.
+      self.evaluate_policy()
+      self.rounds += 1
+      self.start_values_by_round.append(self.values[mdp.getStartState()])
+      print(f"Round {self.rounds}: V(start) = {self.start_values_by_round[-1]:.8f}")
+
+      # Improve the current policy.
+      new_policy = {}
+      for state, old_action in self.policy.items():
+        best_action = old_action
+        for action in mdp.getPossibleActions(state):
+          if self.getQValue(state, action) > self.getQValue(state, best_action):
+            best_action = action
+        new_policy[state] = best_action
+
+      if new_policy == self.policy:
+        print(f"Policy converged after {self.rounds} rounds")
+        break
+      self.policy = new_policy
+
+    # Keep values consistent with the final policy.
+    if self.rounds > 0:
+      self.evaluate_policy()
+
+  def evaluate_policy(self):
+    while True:
+      new_values = self.values.copy()
+      for state, action in self.policy.items():
+        new_values[state] = self.getQValue(state, action)
+
+      difference = max(abs(new_values[s] - self.values[s]) for s in self.values)
+      self.values = new_values
+      if difference < 1e-10:
+        return
 
   def getValue(self, state):
     return self.values[state]
 
   def getQValue(self, state, action):
-    raise NotImplementedError("Homework 3: compute q_pi(s, a)")
+    q = 0.0
+    for next_state, probability in self.mdp.getTransitionStatesAndProbs(state, action):
+      reward = self.mdp.getReward(state, action, next_state)
+      q += probability * (reward + self.discount * self.values[next_state])
+    return q
 
   def getPolicy(self, state):
     return self.policy.get(state)

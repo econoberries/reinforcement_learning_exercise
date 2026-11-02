@@ -15,8 +15,18 @@ methods to `raise ValueError("Your code here.")`. Copying it on top of the HW2
 working folder would destroy the previous assignment. This folder therefore
 starts with your HW2 working solution plus an explicit HW3 class skeleton.
 
-`-a policy` is registered, but **policy iteration is NOT implemented yet**.
-The class raises `NotImplementedError` to keep incompleteness obvious.
+The `-a policy` option is registered. `PolicyIterationAgent` now:
+1. Starts with the first legal action in each nonterminal state.
+2. Evaluates the fixed policy using Bellman expectation updates.
+3. Improves it greedily and stops when no action changes.
+
+`-i` limits policy-evaluation/improvement **rounds**, not individual value
+sweeps. Evaluation stops when the largest state-value change is below `1e-10`.
+
+To answer 3(b) and 3(c), inspect:
+- `rounds`: number of evaluation/improvement rounds executed;
+- `start_values_by_round`: value of the MazeGrid start state after each
+  policy evaluation.
 
 ## How we will develop it
 
@@ -28,3 +38,13 @@ The class raises `NotImplementedError` to keep incompleteness obvious.
 
 **Run existing value agent**:
 `cd gridworld && python3 gridworld.py -g MazeGrid -a value -i 100 -k 10 -t -q`
+
+
+**Run policy iteration**:
+`cd gridworld && python3 gridworld.py -g MazeGrid -a policy -i 100 -k 0 -t -q`
+
+**Compare against value iteration**:
+`python3 gridworld.py -g MazeGrid -a value -i 100 -k 0 -t -q`
+
+**Reproduce the measurements for 3(b) and 3(c)**:
+`python3 homeworks/homework_03/run_policy_experiments.py` (from repository root).

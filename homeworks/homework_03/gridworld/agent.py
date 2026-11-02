@@ -197,6 +197,7 @@ class PolicyIterationAgent(Agent):
       self.evaluate_policy()
       self.rounds += 1
       self.start_values_by_round.append(self.values[mdp.getStartState()])
+      print(f"Round {self.rounds}: V(start) = {self.start_values_by_round[-1]:.8f}")
 
       # Improve the current policy.
       new_policy = {}
@@ -208,6 +209,7 @@ class PolicyIterationAgent(Agent):
         new_policy[state] = best_action
 
       if new_policy == self.policy:
+        print(f"Policy converged after {self.rounds} rounds")
         break
       self.policy = new_policy
 

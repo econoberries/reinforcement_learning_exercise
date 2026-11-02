@@ -26,11 +26,8 @@ for noise in (0.2, 0.0):
     print(f"\nMazeGrid: noise={noise}, discount=0.9")
     print(f"First round with nonzero start value: {first_nonzero}")
     print(f"Policy improvement rounds to stability: {policy_agent.rounds}")
-    print(f"Policy iteration converged: {policy_agent.converged}")
     print(f"Policy iteration V(start): {policy_agent.getValue(start):.6f}")
     print(f"Value iteration V(start):  {value_agent.getValue(start):.6f}")
-    print("Round-by-round: (round, start value, changed actions)")
-    for round_number, (value, changes) in enumerate(zip(
-            policy_agent.start_values_by_round,
-            policy_agent.policy_changes_by_round), 1):
-        print(f"  {round_number:2d}   {value: .9f}   {changes}")
+    print("Start-state value after each policy evaluation:")
+    for round_number, value in enumerate(policy_agent.start_values_by_round, 1):
+        print(f"  Round {round_number}: {value:.9f}")

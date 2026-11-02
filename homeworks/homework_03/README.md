@@ -15,25 +15,19 @@ methods to `raise ValueError("Your code here.")`. Copying it on top of the HW2
 working folder would destroy the previous assignment. This folder therefore
 starts with your HW2 working solution plus an explicit HW3 class skeleton.
 
-The CLI option `-a policy` is registered and `PolicyIterationAgent` is implemented.
-`-i` counts **policy-evaluation + policy-improvement rounds**, not individual
-Bellman value sweeps. Each policy evaluation uses synchronous backups until
-the largest value change is below `1e-12`.
+The `-a policy` option is registered. `PolicyIterationAgent` now:
+1. Starts with the first legal action in each nonterminal state.
+2. Evaluates the fixed policy using Bellman expectation updates.
+3. Improves it greedily and stops when no action changes.
 
-We initialize a deterministic policy with the first available action (usually
-`north`), evaluate it, then greedily improve it. If the last improvement occurs
-at the `-i` limit, the new policy is evaluated once more so the displayed values
-are consistent with it.
+`-i` limits policy-evaluation/improvement **rounds**, not individual value
+sweeps. Evaluation uses a tolerance of `1e-12` and a safety cap of 10000
+sweeps per round.
 
-For HW3 3(b)/(c), instantiate `PolicyIterationAgent` from Python and inspect:
-- `rounds`: evaluation + improvement rounds performed (including stable round)
-- `converged`: whether the policy reached stability
-- `start_values_by_round`: start-state values **before each improvement step**
-- `policy_changes_by_round`: number of policy changes in each round
-
-A round here always means **one complete policy evaluation and one greedy
-improvement**, not one inner Bellman sweep. Use the recorded values when
-counting the first evaluation where the start state becomes nonzero.
+To answer 3(b) and 3(c), inspect:
+- `rounds`: number of evaluation/improvement rounds executed;
+- `start_values_by_round`: value of the MazeGrid start state after each
+  policy evaluation.
 
 ## How we will develop it
 
